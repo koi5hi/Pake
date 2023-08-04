@@ -3,7 +3,7 @@
     <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>
 </p>
 <h1 align="center">Pake</h1>
-<p align="center"><strong>很简单的用 Rust 打包网页生成很小的桌面App</strong></p>
+<p align="center"><strong>利用 Rust 轻松构建轻量级多端桌面应用</strong></p>
 <div align="center">
     <a href="https://twitter.com/HiTw93" target="_blank">
     <img alt="twitter" src="https://img.shields.io/badge/follow-Tw93-red?style=flat-square&logo=Twitter"></a>
@@ -106,7 +106,7 @@
     </tr>
     <tr>
         <td><img src=https://cdn.fliggy.com/upic/i2eg6G.png width=600/></td>
-        <td><img src=https://cdn.fliggy.com/upic/fS1lVi.jpg width=600/></td>
+        <td><img src=https://cdn.fliggy.com/upic/mUzOek.jpg width=600/></td>
     </tr>
         <tr>
         <td>Flomo
@@ -229,6 +229,13 @@ Pake 的发展离不开这些 Hacker 们，一起贡献了大量能力，也欢�
         </a>
     </td>
     <td align="center">
+        <a href="https://github.com/jeasonnow">
+            <img src="https://avatars.githubusercontent.com/u/16950207?v=4" width="90;" alt="jeasonnow"/>
+            <br />
+            <sub><b>Santree</b></sub>
+        </a>
+    </td>
+    <td align="center">
         <a href="https://github.com/wanghanzhen">
             <img src="https://avatars.githubusercontent.com/u/25301012?v=4" width="90;" alt="wanghanzhen"/>
             <br />
@@ -248,15 +255,15 @@ Pake 的发展离不开这些 Hacker 们，一起贡献了大量能力，也欢�
             <br />
             <sub><b>Essesoul</b></sub>
         </a>
-    </td>
+    </td></tr>
+<tr>
     <td align="center">
         <a href="https://github.com/AielloChan">
             <img src="https://avatars.githubusercontent.com/u/7900765?v=4" width="90;" alt="AielloChan"/>
             <br />
             <sub><b>Aiello</b></sub>
         </a>
-    </td></tr>
-<tr>
+    </td>
     <td align="center">
         <a href="https://github.com/m1911star">
             <img src="https://avatars.githubusercontent.com/u/4948120?v=4" width="90;" alt="m1911star"/>
@@ -269,13 +276,6 @@ Pake 的发展离不开这些 Hacker 们，一起贡献了大量能力，也欢�
             <img src="https://avatars.githubusercontent.com/u/126550811?v=4" width="90;" alt="Pake-Actions"/>
             <br />
             <sub><b>Pake Actions</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/jeasonnow">
-            <img src="https://avatars.githubusercontent.com/u/16950207?v=4" width="90;" alt="jeasonnow"/>
-            <br />
-            <sub><b>Santree</b></sub>
         </a>
     </td>
     <td align="center">
@@ -329,6 +329,13 @@ Pake 的发展离不开这些 Hacker 们，一起贡献了大量能力，也欢�
         </a>
     </td>
     <td align="center">
+        <a href="https://github.com/Milo123459">
+            <img src="https://avatars.githubusercontent.com/u/50248166?v=4" width="90;" alt="Milo123459"/>
+            <br />
+            <sub><b>Milo</b></sub>
+        </a>
+    </td>
+    <td align="center">
         <a href="https://github.com/princemaple">
             <img src="https://avatars.githubusercontent.com/u/1329716?v=4" width="90;" alt="princemaple"/>
             <br />
@@ -348,15 +355,15 @@ Pake 的发展离不开这些 Hacker 们，一起贡献了大量能力，也欢�
             <br />
             <sub><b>Null</b></sub>
         </a>
-    </td>
+    </td></tr>
+<tr>
     <td align="center">
         <a href="https://github.com/liusishan">
             <img src="https://avatars.githubusercontent.com/u/33129823?v=4" width="90;" alt="liusishan"/>
             <br />
             <sub><b>Liusishan</b></sub>
         </a>
-    </td></tr>
-<tr>
+    </td>
     <td align="center">
         <a href="https://github.com/piaoyidage">
             <img src="https://avatars.githubusercontent.com/u/5135405?v=4" width="90;" alt="piaoyidage"/>

@@ -171,12 +171,18 @@ window.addEventListener('DOMContentLoaded', _event => {
     #react-root [data-testid="AppTabBar_Explore_Link"],
     #react-root a[href*="/lists"][role="link"][aria-label],
     #react-root a[href*="/i/communitynotes"][role="link"][aria-label],
+    #react-root a[role="link"][aria-label="Communities"],
     #react-root a[href*="/i/verified-orgs-signup"][role="link"][aria-label] {
       display: none !important;
     }
 
     #react-root [data-testid="DMDrawer"] {
       visibility: hidden !important;
+    }
+
+    #__next > div.overflow-hidden.w-full.h-full .absolute.bottom-0.left-0.w-full > div.text-center.text-xs {
+      visibility: hidden !important;
+      height: 0px !important;
     }
 
     #react-root [data-testid="primaryColumn"] > div > div {

@@ -4,9 +4,16 @@ use std::path::PathBuf;
 use tauri::{api, Config, Window};
 
 pub fn get_pake_config() -> (PakeConfig, Config) {
+    #[cfg(feature = "cli-build")]
+    let pake_config: PakeConfig = serde_json::from_str(include_str!("../.pake/pake.json"))
+        .expect("Failed to parse pake config");
+    #[cfg(not(feature = "cli-build"))]
     let pake_config: PakeConfig =
         serde_json::from_str(include_str!("../pake.json")).expect("Failed to parse pake config");
-
+    #[cfg(feature = "cli-build")]
+    let tauri_config: Config = serde_json::from_str(include_str!("../.pake/tauri.conf.json"))
+        .expect("Failed to parse tauri config");
+    #[cfg(not(feature = "cli-build"))]
     let tauri_config: Config = serde_json::from_str(include_str!("../tauri.conf.json"))
         .expect("Failed to parse tauri config");
 
@@ -33,19 +40,43 @@ pub fn show_toast(window: &Window, message: &str) {
     window.eval(&script).unwrap();
 }
 
-pub fn get_download_message() -> String {
-    let default_message = "Download successful, saved to download directory~";
-    let chinese_message = "下载成功，已保存到下载目录~";
+pub enum MessageType {
+    Start,
+    Success,
+    Failure,
+}
+
+pub fn get_download_message(message_type: MessageType) -> String {
+    let default_start_message = "Start downloading~";
+    let chinese_start_message = "开始下载中~";
+
+    let default_success_message = "Download successful, saved to download directory~";
+    let chinese_success_message = "下载成功，已保存到下载目录~";
+
+    let default_failure_message = "Download failed, please check your network connection~";
+    let chinese_failure_message = "下载失败，请检查你的网络连接~";
 
     env::var("LANG")
         .map(|lang| {
             if lang.starts_with("zh") {
-                chinese_message
+                match message_type {
+                    MessageType::Start => chinese_start_message,
+                    MessageType::Success => chinese_success_message,
+                    MessageType::Failure => chinese_failure_message,
+                }
             } else {
-                default_message
+                match message_type {
+                    MessageType::Start => default_start_message,
+                    MessageType::Success => default_success_message,
+                    MessageType::Failure => default_failure_message,
+                }
             }
         })
-        .unwrap_or(default_message)
+        .unwrap_or_else(|_| match message_type {
+            MessageType::Start => default_start_message,
+            MessageType::Success => default_success_message,
+            MessageType::Failure => default_failure_message,
+        })
         .to_string()
 }
 

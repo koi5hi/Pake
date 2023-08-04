@@ -1,17 +1,13 @@
 const shortcuts = {
-  ArrowUp: () => scrollTo(0, 0),
-  ArrowDown: () => scrollTo(0, document.body.scrollHeight),
-  // Don't use command + ArrowLeft or command + ArrowRight
-  // When editing text in page, it causes unintended page navigation.
-  // ArrowLeft: () => window.history.back(),
-  // ArrowRight: () => window.history.forward(),
+  'ArrowUp': () => scrollTo(0, 0),
+  'ArrowDown': () => scrollTo(0, document.body.scrollHeight),
   '[': () => window.history.back(),
   ']': () => window.history.forward(),
-  r: () => window.location.reload(),
+  'r': () => window.location.reload(),
   '-': () => zoomOut(),
   '=': () => zoomIn(),
   '+': () => zoomIn(),
-  0: () => setZoom('100%'),
+  '0': () => setZoom('100%'),
 };
 
 function setZoom(zoom) {
@@ -40,46 +36,6 @@ function handleShortcut(event) {
   }
 }
 
-//这里参考 ChatGPT 的代码
-const uid = () => window.crypto.getRandomValues(new Uint32Array(1))[0];
-
-function transformCallback(callback = () => {}, once = false) {
-  const identifier = uid();
-  const prop = `_${identifier}`;
-  Object.defineProperty(window, prop, {
-    value: (result) => {
-      if (once) {
-        Reflect.deleteProperty(window, prop);
-      }
-      return callback(result);
-    },
-    writable: false,
-    configurable: true,
-  });
-  return identifier;
-}
-
-async function invoke(cmd, args) {
-  return new Promise((resolve, reject) => {
-    if (!window.__TAURI_POST_MESSAGE__)
-      reject('__TAURI_POST_MESSAGE__ does not exist~');
-    const callback = transformCallback((e) => {
-      resolve(e);
-      Reflect.deleteProperty(window, `_${error}`);
-    }, true);
-    const error = transformCallback((e) => {
-      reject(e);
-      Reflect.deleteProperty(window, `_${callback}`);
-    }, true);
-    window.__TAURI_POST_MESSAGE__({
-      cmd,
-      callback,
-      error,
-      ...args,
-    });
-  });
-}
-
 // Judgment of file download.
 function isDownloadLink(url) {
   const fileExtensions = [
@@ -105,21 +61,22 @@ function externalTargetLink() {
 document.addEventListener('DOMContentLoaded', () => {
   const tauri = window.__TAURI__;
   const appWindow = tauri.window.appWindow;
+  const invoke = tauri.tauri.invoke;
 
   const topDom = document.createElement('div');
   topDom.id = 'pack-top-dom';
   document.body.appendChild(topDom);
   const domEl = document.getElementById('pack-top-dom');
 
+  domEl.addEventListener('touchstart', () => {
+    appWindow.startDragging().then();
+  });
+
   domEl.addEventListener('mousedown', (e) => {
     e.preventDefault();
     if (e.buttons === 1 && e.detail !== 2) {
       appWindow.startDragging().then();
     }
-  });
-
-  domEl.addEventListener('touchstart', () => {
-    appWindow.startDragging().then();
   });
 
   domEl.addEventListener('dblclick', () => {
@@ -137,42 +94,121 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Collect blob urls to blob by overriding window.URL.createObjectURL
+  function collectUrlToBlobs() {
+    const backupCreateObjectURL = window.URL.createObjectURL;
+    window.blobToUrlCaches = new Map();
+    window.URL.createObjectURL = (blob) => {
+      const url = backupCreateObjectURL.call(window.URL, blob);
+      window.blobToUrlCaches.set(url, blob);
+      return url;
+    };
+  }
+
+  function convertBlobUrlToBinary(blobUrl) {
+    return new Promise((resolve) => {
+      const blob = window.blobToUrlCaches.get(blobUrl);
+      const reader = new FileReader();
+
+      reader.readAsArrayBuffer(blob);
+      reader.onload = () => {
+        resolve(Array.from(new Uint8Array(reader.result)));
+      };
+    });
+  }
+
+  function downloadFromDataUri(dataURI, filename) {
+    const byteString = atob(dataURI.split(',')[1]);
+    // write the bytes of the string to an ArrayBuffer
+    const bufferArray = new ArrayBuffer(byteString.length);
+
+    // create a view into the buffer
+    const binary = new Uint8Array(bufferArray);
+
+    // set the bytes of the buffer to the correct values
+    for (let i = 0; i < byteString.length; i++) {
+      binary[i] = byteString.charCodeAt(i);
+    }
+
+    // write the ArrayBuffer to a binary, and you're done
+    invoke('download_file_by_binary', {
+      params: {
+        filename,
+        binary: Array.from(binary)
+      },
+    });
+  }
+
+  function downloadFromBlobUrl(blobUrl, filename) {
+    convertBlobUrlToBinary(blobUrl).then((binary) => {
+      invoke('download_file_by_binary', {
+        params: {
+          filename,
+          binary
+        },
+      });
+    });
+  }
+
+
+// detect blob download by createElement("a")
+  function detectDownloadByCreateAnchor() {
+    const createEle = document.createElement;
+    document.createElement = (el) => {
+      if (el !== 'a') return createEle.call(document, el);
+      const anchorEle = createEle.call(document, el);
+
+      // use addEventListener to avoid overriding the original click event.
+      anchorEle.addEventListener('click', (e) => {
+        const url = anchorEle.href;
+        const filename = anchorEle.download || getFilenameFromUrl(url);
+        if (window.blobToUrlCaches.has(url)) {
+          downloadFromBlobUrl(url, filename);
+          // case: download from dataURL -> convert dataURL ->
+        } else if (url.startsWith('data:')) {
+          downloadFromDataUri(url, filename);
+        } else {
+          handleExternalLink(e, url);
+        }
+      }, true);
+
+      return anchorEle;
+    };
+  }
+
+  const isExternalLink = (url, host) => window.location.host !== host;
+  // process special download protocol['data:','blob:']
+  const isSpecialDownload = (url) => ['blob', 'data'].some(protocal => url.startsWith(protocal));
+
+  const isDownloadRequired = (url, anchorElement, e) =>
+    anchorElement.download || e.metaKey || e.ctrlKey || isDownloadLink(url);
+
+  const handleExternalLink = (e, url) => {
+    e.preventDefault();
+    tauri.shell.open(url);
+  };
+
+  const handleDownloadLink = (e, url, filename) => {
+    e.preventDefault();
+    invoke('download_file', {params: {url, filename}});
+  };
+
   const detectAnchorElementClick = (e) => {
     const anchorElement = e.target.closest('a');
     if (anchorElement && anchorElement.href) {
-      const target = anchorElement.target;
-      anchorElement.target = '_self';
       const hrefUrl = new URL(anchorElement.href);
       const absoluteUrl = hrefUrl.href;
+      let filename = anchorElement.download || getFilenameFromUrl(absoluteUrl);
 
       // Handling external link redirection.
-      if (
-        window.location.host !== hrefUrl.host &&
-        (target === '_blank' || target === '_new' || externalTargetLink())
-      ) {
-        e.preventDefault && e.preventDefault();
-        tauri.shell.open(absoluteUrl);
+      if (isExternalLink(absoluteUrl, hrefUrl.host) && (['_blank', '_new'].includes(anchorElement.target) || externalTargetLink())) {
+        handleExternalLink(e, absoluteUrl);
         return;
       }
 
-      let filename = anchorElement.download || getFilenameFromUrl(absoluteUrl);
-
       // Process download links for Rust to handle.
-      // If the download attribute is set, the download attribute is used as the file name.
-      if (
-        (anchorElement.download ||
-          e.metaKey ||
-          e.ctrlKey ||
-          isDownloadLink(absoluteUrl)) &&
-        !externalDownLoadLink()
-      ) {
-        e.preventDefault();
-        invoke('download_file', {
-          params: {
-            url: absoluteUrl,
-            filename,
-          },
-        });
+      if (isDownloadRequired(absoluteUrl, anchorElement, e) && !externalDownLoadLink() && !isSpecialDownload(absoluteUrl)) {
+        handleDownloadLink(e, absoluteUrl, filename);
       }
     }
   };
@@ -185,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Rewrite the window.open function.
   const originalWindowOpen = window.open;
-  window.open = function(url, name, specs) {
+  window.open = function (url, name, specs) {
     // Apple login and google login
     if (name === 'AppleAuthentication') {
       //do nothing
@@ -206,6 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (e) {
     console.log(e);
   }
+
+  // Fix Chinese input method "Enter" on Safari
+  document.addEventListener('keydown', (e) => {
+    if (e.keyCode === 229) e.stopPropagation();
+  }, true);
+
 });
 
 function setDefaultZoom() {
@@ -217,78 +259,5 @@ function setDefaultZoom() {
 
 function getFilenameFromUrl(url) {
   const urlPath = new URL(url).pathname;
-  const filename = urlPath.substring(urlPath.lastIndexOf('/') + 1);
-  return filename;
-}
-
-function removeUrlParameters(url) {
-  const parsedUrl = new URL(url);
-  parsedUrl.search = '';
-  return parsedUrl.toString();
-}
-
-// Toggle video playback when the window is hidden.
-function toggleVideoPlayback(pause) {
-  const videos = document.getElementsByTagName('video');
-  for (const video of videos) {
-    if (pause) {
-      video.pause();
-    } else {
-      video.play();
-    }
-  }
-}
-
-// Collect blob urls to blob by overriding window.URL.createObjectURL
-function collectUrlToBlobs() {
-  const backupCreateObjectURL = window.URL.createObjectURL;
-  window.blobToUrlCaches = new Map();
-  window.URL.createObjectURL = (blob) => {
-    const url = backupCreateObjectURL.call(window.URL, blob);
-    window.blobToUrlCaches.set(url, blob);
-    return url;
-  };
-}
-
-function convertBlobUrlToBinary(blobUrl) {
-  return new Promise((resolve) => {
-    const blob = window.blobToUrlCaches.get(blobUrl);
-    const reader = new FileReader();
-
-    reader.readAsArrayBuffer(blob);
-    reader.onload = () => {
-      resolve(reader.result);
-    };
-  });
-}
-
-function downloadFromBlobUrl(blobUrl, filename) {
-  const tauri = window.__TAURI__;
-  convertBlobUrlToBinary(blobUrl).then((binary) => {
-    console.log('binary', binary);
-    tauri.fs.writeBinaryFile(filename, binary, {
-      dir: tauri.fs.BaseDirectory.Download,
-    }).then(() => {
-      window.pakeToast('Download successful, saved to download directory~');
-    });
-  });
-}
-
-// detect blob download by createElement("a")
-function detectDownloadByCreateAnchor() {
-  const createEle = document.createElement;
-  document.createElement = (el) => {
-    if (el !== 'a') return createEle.call(document, el);
-    const anchorEle = createEle.call(document, el);
-
-    // use addEventListener to avoid overriding the original click event.
-    anchorEle.addEventListener('click', () => {
-      const url = anchorEle.href;
-      if (window.blobToUrlCaches.has(url)) {
-        downloadFromBlobUrl(url, anchorEle.download || getFilenameFromUrl(url));
-      }
-    });
-
-    return anchorEle;
-  };
+  return urlPath.substring(urlPath.lastIndexOf('/') + 1);
 }
